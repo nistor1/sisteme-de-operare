@@ -15,12 +15,13 @@ int listDir(const char *path, char* filter)
     dir = opendir(path);
 
     struct stat statbuf;
-    bool printed = false;
 
     if(dir == NULL) {
         printf("ERROR\ninvalid directory path");
         return -1;
     }
+    
+    printf("SUCCESS\n");
     while((entry = readdir(dir)) != NULL) {
 
         char file_path[1024];
@@ -33,7 +34,6 @@ int listDir(const char *path, char* filter)
         }
 
         if(filter == NULL) {
-            printed = true;
             printf("%s\n", file_path); 
         } else {
             if(filter[0] == 'r') { // grater_than
@@ -43,7 +43,6 @@ int listDir(const char *path, char* filter)
                             sscanf(filter + 2, "%ld", &size);
                             
                             if(file_stat.st_size > size) {
-                                printed = true;
                                 printf("%s\n", file_path);
                             }
                         }
@@ -53,15 +52,11 @@ int listDir(const char *path, char* filter)
                     int lengthFilter = strlen(filter+ 2);
                     length = strlen(entry->d_name);
                     if(strncmp(entry->d_name + length - lengthFilter, filter + 2, lengthFilter) == 0) {
-                        printed = true;
                         printf("%s\n", file_path); 
                     }
                 }
             }
         }   
-    }
-    if(printed == false) {
-        printf("SUCCESS\n");
     }
     closedir(dir);
     return 0;
