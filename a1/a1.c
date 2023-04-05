@@ -46,24 +46,20 @@ int listDir(const char *path, char* filter, int* firstO)
                long int size = 0;
                 sscanf(filter + 2, "%ld", &size);
                 if(lstat(path, &statbuf) == 0) {
-                if(S_ISREG(statbuf.st_mode)) {
-                            
                     if(file_stat.st_size > size) {
-                        printf("%s\n", file_path);
+                            printf("%s\n", file_path);
                         }
-                    }
-
-                } else {// ends in
-                    int length = 0;
-                    int lengthFilter = strlen(filter+ 2);
-                    length = strlen(entry->d_name);
-                    if(strncmp(entry->d_name + length - lengthFilter + 1, filter + 2, lengthFilter) == 0) {
-                        printf("%s\n", file_path); 
-                    }
+                }
+            } else {// ends in
+                int length = 0;
+                int lengthFilter = strlen(filter+ 2);
+                length = strlen(entry->d_name);
+                if(strncmp(entry->d_name + length - lengthFilter, filter + 2, lengthFilter) == 0) {
+                    printf("%s\n", file_path); 
                 }
             }
-            }
-        }   
+        }
+    }  
     closedir(dir);
     return 0;
 }
@@ -130,10 +126,10 @@ int main(int argc, char **argv){
                  
                 for (int i = 1; i < argc; i++) {
                     if (strncmp(argv[i], "size_greater=", 12) == 0) {
-                        filter = argv[i] + 10;
+                        filter = argv[i] + 11;
                         break;
                     } else if (strncmp(argv[i], "name_ends_with=", 14) == 0) {
-                        filter = argv[i] + 12;
+                        filter = argv[i] + 13;
                         break;
                     }
                 }
