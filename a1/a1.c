@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 
-int listDir(const char *path, char* filter)
+int listDir(const char *path, char* filter, int* firstO)
 {
     DIR *dir = NULL;
     struct dirent *entry = NULL;
@@ -20,9 +20,12 @@ int listDir(const char *path, char* filter)
         printf("ERROR\ninvalid directory path");
         return -1;
     }
-    
-    printf("SUCCESS\n");
+    if(*firstO == 0) {
+        printf("SUCCESS\n");
+        (*firstO)++;
+    }
     while((entry = readdir(dir)) != NULL) {
+
 
         char file_path[1024];
         sprintf(file_path, "%s/%s", path, entry->d_name);
@@ -32,69 +35,68 @@ int listDir(const char *path, char* filter)
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
-
         if(filter == NULL) {
-            printf("%s\n", file_path); 
+             if(lstat(file_path, &statbuf) == 0) {
+                        if(S_ISREG(statbuf.st_mode) || S_ISDIR(statbuf.st_mode)) {
+                            printf("%s\n", file_path); 
+
+                        }}
         } else {
             if(filter[0] == 'r') { // grater_than
-                    if(lstat(path, &statbuf) == 0) {
-                        if(S_ISREG(statbuf.st_mode)) {
-                            long int size = 0;
-                            sscanf(filter + 2, "%ld", &size);
+               long int size = 0;
+                sscanf(filter + 2, "%ld", &size);
+                if(lstat(path, &statbuf) == 0) {
+                if(S_ISREG(statbuf.st_mode)) {
                             
-                            if(file_stat.st_size > size) {
-                                printf("%s\n", file_path);
-                            }
+                    if(file_stat.st_size > size) {
+                        printf("%s\n", file_path);
                         }
+                    }
 
                 } else {// ends in
                     int length = 0;
                     int lengthFilter = strlen(filter+ 2);
                     length = strlen(entry->d_name);
-                    if(strncmp(entry->d_name + length - lengthFilter, filter + 2, lengthFilter) == 0) {
+                    if(strncmp(entry->d_name + length - lengthFilter + 1, filter + 2, lengthFilter) == 0) {
                         printf("%s\n", file_path); 
                     }
                 }
             }
+            }
         }   
-    }
     closedir(dir);
     return 0;
 }
 
-    void listRec(const char *path, char* filter) {
+    void listRec(const char *path, char* filter, int* firstO) {
         DIR *dir = NULL;
         struct dirent *entry = NULL;
         char fullPath[1024];
         struct stat statbuf;
-
+        if(listDir(path, filter, firstO) == -1){
+            return;
+        }
         dir = opendir(path);
         if(dir == NULL) {
             printf("ERROR\ninvalid directory path");
             return;
         }
+        if(*firstO == 0) {
+            printf("SUCCESS\n");
+            (*firstO)++;
+        }
+        
         while((entry = readdir(dir)) != NULL) {
             if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
                 snprintf(fullPath, 1024, "%s/%s", path, entry->d_name);
                     if(lstat(fullPath, &statbuf) == 0) {
-                            if(S_ISDIR(statbuf.st_mode)) {
-                                listDir(fullPath, filter);
-                                listRec(fullPath, filter);
+                            if(S_ISDIR(statbuf.st_mode) || S_ISLNK(statbuf.st_mode)) {
+                                listRec(fullPath, filter, firstO);
                             }               
                         }
                 }
         }
         closedir(dir);
-    }
-
-
-
-
-    void listFunction(char* path, bool isRecursive, char* filter) {
-        listDir(path, filter);
-        if(isRecursive == true) {
-            listRec(path, filter);
-        } 
     }
 
 int main(int argc, char **argv){
@@ -127,11 +129,11 @@ int main(int argc, char **argv){
                 }
                  
                 for (int i = 1; i < argc; i++) {
-                    if (strncmp(argv[i], "size_greater=", 13) == 0) {
-                        filter = argv[i] + 11;
+                    if (strncmp(argv[i], "size_greater=", 12) == 0) {
+                        filter = argv[i] + 10;
                         break;
-                    } else if (strncmp(argv[i], "name_ends_with=", 15) == 0) {
-                        filter = argv[i] + 13;
+                    } else if (strncmp(argv[i], "name_ends_with=", 14) == 0) {
+                        filter = argv[i] + 12;
                         break;
                     }
                 }
@@ -141,12 +143,12 @@ int main(int argc, char **argv){
                         filter = NULL;
                     }                    
                 }
-                if(path == NULL) {
-                    printf("ERROR\ninvalid directory path");
-                    return -1;
-                }
-                listFunction(path, isRecursive, filter);
-
+                int firstO = 0;
+                if(isRecursive == true) {
+                    listRec(path, filter, &firstO);
+                } else {
+                    listDir(path, filter, &firstO);
+                } 
             }
         }
     } 
