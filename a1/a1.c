@@ -101,11 +101,16 @@ int main(int argc, char **argv){
             printf("19799\n");
         } else {
             bool list = false;
+            //bool parse = false;
             for (int i = 1; i < argc; i++) {
                 if (strcmp(argv[i], "list") == 0) {
                     list = true;
                     break;
                 }
+              //  if (strcmp(argv[i], "parse") == 0) {
+               //     parse = true;
+                 //   break;
+                //}
             }
             if(list == true) {
                 bool isRecursive = false;
@@ -145,7 +150,7 @@ int main(int argc, char **argv){
                 } else {
                     listDir(path, filter, &firstO);
                 } 
-            }
+            } 
         }
     } 
     
