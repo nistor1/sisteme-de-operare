@@ -172,12 +172,11 @@ int displayBufferBackwards(char* buffer, int size, int cur) {
     return 1;
 }
 
-void extractSF(char* path, int section, int line) {
-    HEADER_SECTION_FILE h;
-    int isValid = parseSF(path, &h, false);
+int extractSF(char* path, int section, int line, HEADER_SECTION_FILE* h) {
+    int isValid = parseSF(path, h, false);
     if(isValid == -1) {
-        free(h.sectionsHeaders);
-        return;
+        free(h->sectionsHeaders);
+        return -1;
     }
 
     int fd = -1;
@@ -186,16 +185,16 @@ void extractSF(char* path, int section, int line) {
     fd = open(path, O_RDONLY);
     if(fd == -1) {
         printf("ERROR\ninvalid directory path");
-        free(h.sectionsHeaders);
-        return;
+        free(h->sectionsHeaders);
+        return -1;
     }
     
     int firstSuccess = 0;
     int index = 0;
     int cntNewLine = 0;
     section--;
-    lseek(fd, h.sectionsHeaders[section].sectOffset, SEEK_SET);
-    while(cntNewLine <= line && index < h.sectionsHeaders[section].sectSize) {
+    lseek(fd, h->sectionsHeaders[section].sectOffset, SEEK_SET);
+    while(cntNewLine <= line && index < h->sectionsHeaders[section].sectSize) {
 
         read(fd, buffer, 20);
         int j = 0;
@@ -220,7 +219,9 @@ void extractSF(char* path, int section, int line) {
             if(j-1 != 0) {
                 if(displayBufferBackwards(buffer, 20, j-1) == 0) {
                     //printf("\nIo zic ca merge");
-                    break;
+                    close(fd);
+                    free(h->sectionsHeaders);
+                    return 0;
                 }
             } 
             if(lseek(fd, -40, SEEK_CUR) == -1) {
@@ -232,7 +233,8 @@ void extractSF(char* path, int section, int line) {
     }
 
     close(fd);
-    free(h.sectionsHeaders);
+    free(h->sectionsHeaders);
+    return -1;
 }
 
 
@@ -262,7 +264,28 @@ int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
         if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
-        if(filter == NULL) {
+        if (verifySF == true) {
+            if (lstat(file_path, &statbuf) == 0) {
+                if (S_ISREG(statbuf.st_mode)) {
+                    HEADER_SECTION_FILE h;
+                    if (parseSF(file_path, &h, false) == 0) {
+                        for (int i = 0; i < h.noOfSections; i++) {
+                            if (extractSF(file_path, i, 15, &h) == 0) {
+                                printf("%s\n", file_path);
+                                break;
+                            }
+                        }
+                    }
+                    if (h.sectionsHeaders != NULL) {
+                        free(h.sectionsHeaders);
+                    }
+                }
+                else if (S_ISDIR(statbuf.st_mode)) {
+                    // Skip directories
+                    continue;
+                }
+            }
+        }else if(filter == NULL) {
              if(lstat(file_path, &statbuf) == 0) {
                         if(S_ISREG(statbuf.st_mode) || S_ISDIR(statbuf.st_mode)) {
                             printf("%s\n", file_path); 
@@ -331,6 +354,7 @@ int main(int argc, char **argv){
             bool list = false;
             bool parse = false;
             bool extract = false;
+            bool findall = false;
             for (int i = 1; i < argc; i++) {
                 if (strcmp(argv[i], "list") == 0) {
                     list = true;
@@ -342,6 +366,10 @@ int main(int argc, char **argv){
                 }
                 if (strcmp(argv[i], "extract") == 0) {
                     extract = true;
+                    break;
+                }
+                if (strcmp(argv[i], "findall") == 0) {
+                    findall = true;
                     break;
                 }
             }
@@ -409,8 +437,19 @@ int main(int argc, char **argv){
                         sscanf(argv[i] + 5, "%d", &line);
                     }
                 }
-                extractSF(path, section, line);
-            } 
+                HEADER_SECTION_FILE h;
+                extractSF(path, section, line, &h);
+            } else if(findall == true) {
+                char* path = NULL;
+                for (int i = 1; i < argc; i++) {
+                    if (strncmp(argv[i], "path=", 5) == 0) {
+                        path = argv[i] + 5;
+                        break;
+                    }
+                }
+                int firstO = 0;
+                listRec(path, NULL, &firstO, false);
+            }
         }
     } 
     
