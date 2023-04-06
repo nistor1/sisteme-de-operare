@@ -155,6 +155,7 @@ int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
     if(display == true) {
             displaySF(*headerSF);
     }
+    free(headerSF->sectionsHeaders);
     close(fd);
     return 0;
 }
