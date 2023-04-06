@@ -36,9 +36,8 @@ void displaySF(HEADER_SECTION_FILE headerSF) {
 
 }
 
-int parseSF(char* path) {
+int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
 
-    HEADER_SECTION_FILE headerSF;
     int fd = -1;
     char buffer[27];
 
@@ -63,14 +62,14 @@ int parseSF(char* path) {
         if(bufferCapacity == 25) {     
             step++; 
             if(step == 0 && bufferCapacity - 2 >= 0) {
-                headerSF.magic[1] = buffer[25];
-                headerSF.magic[0] = buffer[24];
+                headerSF->magic[1] = buffer[25];
+                headerSF->magic[0] = buffer[24];
                 //printf("(%c    %c)", headerSF.magic[0], headerSF.magic[1]);
                 bufferCapacity -= 2;
                 step++;
 
-                if(headerSF.magic[1] == 'Z' && headerSF.magic[0] == 'F') { 
-                    printf("ERROR\nwrong magic|version|select_nr|sect_types");
+                if(headerSF->magic[0] != 'Z' || headerSF->magic[1] != 'F') { 
+                    printf("ERROR\nwrong magic");
                     return -1;
                 }
 
@@ -83,19 +82,19 @@ int parseSF(char* path) {
                // printf("(%d    %d)", tempShort[0], tempShort[1]);
                 memcpy(&f, tempShort, sizeof(short int));
                 //printf("%d\n", (int)f);
-                headerSF.headerSize = f;
+                headerSF->headerSize = f;
                 bufferCapacity -= 2;
                 step++;
             }
             if(step == 2) {
-                lseek(fd, -headerSF.headerSize, SEEK_END);
+                lseek(fd, -headerSF->headerSize, SEEK_END);
             }
             if(step == 3) {
-                memcpy(&headerSF.version, buffer, sizeof(int));
-                /*if(headerSF.version >= 25 && headerSF.version <= 118) {
-                    printf("ERROR\nwrong magic|version|select_nr|sect_types");
+                memcpy(&headerSF->version, buffer, sizeof(int));
+                if(!(headerSF->version >= 25 && headerSF->version <= 118)) {
+                    printf("ERROR\nwrong version");
                     return -1;
-                } */
+                } 
                 //printf("%d ", headerSF.version);
 
                 //for(int i = 0; i < 25; i++) {
@@ -103,44 +102,44 @@ int parseSF(char* path) {
                 //}
 
 
-                memcpy(&headerSF.noOfSections, buffer + 4, sizeof(char));
-                if(headerSF.noOfSections < 3 || headerSF.noOfSections > 11) {
-                    printf("ERROR\nwrong magic|version|select_nr|sect_types");
+                memcpy(&headerSF->noOfSections, buffer + 4, sizeof(char));
+                if(headerSF->noOfSections < 3 || headerSF->noOfSections > 11) {
+                    printf("ERROR\nwrong sect_nr");
                     return -1;
                 }
-                indexSections = headerSF.noOfSections;
+                indexSections = headerSF->noOfSections;
                 bufferCapacity -= 5;
-                lseek(fd, -headerSF.headerSize + 5, SEEK_END);
+                lseek(fd, -headerSF->headerSize + 5, SEEK_END);
             }
             if(step == 4) {
                 char tempSectType = 0;
                 int tempSectOffset = 0;
                 int tempSectSize = 0;
-                if(headerSF.sectionsHeaders == NULL){
-                   headerSF.sectionsHeaders = (SECTION_HEADERS*)malloc(headerSF.noOfSections * sizeof(SECTION_HEADERS));
+                if(headerSF->sectionsHeaders == NULL){
+                   headerSF->sectionsHeaders = (SECTION_HEADERS*)malloc(headerSF->noOfSections * sizeof(SECTION_HEADERS));
                 }
-                if(headerSF.sectionsHeaders == NULL) {
+                if(headerSF->sectionsHeaders == NULL) {
                     return -1;
                 }
-                int index = headerSF.noOfSections - indexSections;
+                int index = headerSF->noOfSections - indexSections;
                 for(int j = 0; j < 16; j++) {
-                    headerSF.sectionsHeaders[index].sectName[j] = buffer[j];
+                    headerSF->sectionsHeaders[index].sectName[j] = buffer[j];
                     //printf("%c", buffer[j]);
                 }
-                headerSF.sectionsHeaders[index].sectName[16] = 0;
+                headerSF->sectionsHeaders[index].sectName[16] = 0;
 
                 memcpy(&(tempSectType), buffer + 16, sizeof(char));
                 memcpy(&(tempSectOffset), buffer + 17, sizeof(int));
                 memcpy(&(tempSectSize), buffer + 21, sizeof(int));
 
                 if(!(tempSectType == 71 || tempSectType == 55 || tempSectType == 93 ||tempSectType == 36 ||tempSectType == 82 ||tempSectType == 67)) {
-                    printf("ERROR\nwrong magic|version|select_nr|sect_types");
+                    printf("ERROR\nwrong sect_types");
                     return -1;   
                 }
 
-                headerSF.sectionsHeaders[index].sectType = tempSectType;
-                headerSF.sectionsHeaders[index].sectOffset = tempSectOffset;
-                headerSF.sectionsHeaders[index].sectSize = tempSectSize;
+                headerSF->sectionsHeaders[index].sectType = tempSectType;
+                headerSF->sectionsHeaders[index].sectOffset = tempSectOffset;
+                headerSF->sectionsHeaders[index].sectSize = tempSectSize;
                 //printf("%d\n", index);
                 //printf("->%d->%d->%d\n", headerSF.sectionsHeaders[index].sectType, headerSF.sectionsHeaders[index].sectOffset, headerSF.sectionsHeaders[index].sectSize);
                 lseek(fd, -1, SEEK_CUR);
@@ -153,11 +152,87 @@ int parseSF(char* path) {
     //    for(int i = 0; i < headerSF.noOfSections; i++) {
     //    printf("section%d: %s %d %d\n", i+1, headerSF.sectionsHeaders[i].sectName, (int)headerSF.sectionsHeaders[i].sectType,  (int)headerSF.sectionsHeaders[i].sectSize);
    // }
-
-    displaySF(headerSF);
-    free(headerSF.sectionsHeaders);
+    if(display == true) {
+            displaySF(*headerSF);
+    }
     close(fd);
     return 0;
+}
+
+int displayBufferBackwards(char* buffer, int size, int cur) {
+    if(cur > 0) {
+        size = cur;
+    }
+    for(int i = size - 1; i >= 0; i--) {
+        if(buffer[i] == '\n' || buffer[i] == 0) {
+            return 0;
+        }
+        printf("%c", buffer[i]);
+    }
+    return 1;
+}
+
+void extractSF(char* path, int section, int line) {
+    HEADER_SECTION_FILE h;
+    int isValid = parseSF(path, &h, false);
+    if(isValid == -1) {
+        free(h.sectionsHeaders);
+        return;
+    }
+
+    int fd = -1;
+    char buffer[21];
+
+    fd = open(path, O_RDONLY);
+    if(fd == -1) {
+        printf("ERROR\ninvalid directory path");
+        free(h.sectionsHeaders);
+        return;
+    }
+    
+    int firstSuccess = 0;
+    int index = 0;
+    int cntNewLine = 0;
+    section--;
+    lseek(fd, h.sectionsHeaders[section].sectOffset, SEEK_SET);
+    while(cntNewLine <= line && index < h.sectionsHeaders[section].sectSize) {
+
+        read(fd, buffer, 20);
+        int j = 0;
+        for(j = 0; j < 20; j++) {
+            if(cntNewLine == line) {
+                break;
+            }
+            if(buffer[j] == '\n' || buffer[j] == 0) {
+                cntNewLine++;
+            }
+            if(firstSuccess == 1) {
+               index++;
+            }
+        }
+        if(cntNewLine == line) {
+            if(firstSuccess == 0) {
+                printf("SUCCESS\n"); 
+                firstSuccess++;
+            }
+            //buffer[20] == 0;
+            //printf("%s", buffer);
+            if(j-1 != 0) {
+                if(displayBufferBackwards(buffer, 20, j-1) == 0) {
+                    //printf("\nIo zic ca merge");
+                    break;
+                }
+            } 
+            if(lseek(fd, -40, SEEK_CUR) == -1) {
+            lseek(fd, 0, SEEK_SET);
+            } 
+        }
+        j= 0;
+        //printf("\n%d\n", cntNewLine);
+    }
+
+    close(fd);
+    free(h.sectionsHeaders);
 }
 
 
@@ -255,6 +330,7 @@ int main(int argc, char **argv){
         } else {
             bool list = false;
             bool parse = false;
+            bool extract = false;
             for (int i = 1; i < argc; i++) {
                 if (strcmp(argv[i], "list") == 0) {
                     list = true;
@@ -262,6 +338,10 @@ int main(int argc, char **argv){
                 }
                 if (strcmp(argv[i], "parse") == 0) {
                     parse = true;
+                    break;
+                }
+                if (strcmp(argv[i], "extract") == 0) {
+                    extract = true;
                     break;
                 }
             }
@@ -311,8 +391,26 @@ int main(int argc, char **argv){
                         break;
                     }
                 }
-                parseSF(path);
-            }
+                HEADER_SECTION_FILE h;
+                parseSF(path, &h, true);
+                free(h.sectionsHeaders);
+            } else if(extract == true) {
+                char* path = NULL;
+                int section = 0;
+                int line = 0;
+                for (int i = 1; i < argc; i++) {
+                    if (strncmp(argv[i], "path=", 5) == 0) {
+                        path = argv[i] + 5;
+                    }
+                    if (strncmp(argv[i], "section=", 8) == 0) {
+                        sscanf(argv[i] + 8, "%d", &section);
+                    }
+                    if (strncmp(argv[i], "line=", 5) == 0) {
+                        sscanf(argv[i] + 5, "%d", &line);
+                    }
+                }
+                extractSF(path, section, line);
+            } 
         }
     } 
     
