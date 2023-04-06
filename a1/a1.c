@@ -155,7 +155,6 @@ int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
     if(display == true) {
             displaySF(*headerSF);
     }
-    free(headerSF->sectionsHeaders);
     close(fd);
     return 0;
 }
@@ -237,7 +236,7 @@ void extractSF(char* path, int section, int line) {
 }
 
 
-int listDir(const char *path, char* filter, int* firstO) {
+int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
     DIR *dir = NULL;
     struct dirent *entry = NULL;
     dir = opendir(path);
@@ -292,12 +291,12 @@ int listDir(const char *path, char* filter, int* firstO) {
     return 0;
     }   
 
-    void listRec(const char *path, char* filter, int* firstO) {
+    void listRec(const char *path, char* filter, int* firstO, bool verifySF) {
         DIR *dir = NULL;
         struct dirent *entry = NULL;
         char fullPath[1024];
         struct stat statbuf;
-        if(listDir(path, filter, firstO) == -1){
+        if(listDir(path, filter, firstO, verifySF) == -1){
             return;
         }
         dir = opendir(path);
@@ -315,7 +314,7 @@ int listDir(const char *path, char* filter, int* firstO) {
                 snprintf(fullPath, 1024, "%s/%s", path, entry->d_name);
                     if(lstat(fullPath, &statbuf) == 0) {
                             if(S_ISDIR(statbuf.st_mode) || S_ISLNK(statbuf.st_mode)) {
-                                listRec(fullPath, filter, firstO);
+                                listRec(fullPath, filter, firstO, verifySF);
                             }               
                         }
                 }
@@ -380,9 +379,9 @@ int main(int argc, char **argv){
                 }
                 int firstO = 0;
                 if(isRecursive == true) {
-                    listRec(path, filter, &firstO);
+                    listRec(path, filter, &firstO, false);
                 } else {
-                    listDir(path, filter, &firstO);
+                    listDir(path, filter, &firstO, false);
                 } 
             } else if(parse == true) {
                 char* path = NULL;
