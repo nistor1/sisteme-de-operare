@@ -330,7 +330,7 @@ int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
                        for (int i = 0; i <= h.noOfSections; i++) {
                             int successExtractSF = -1;
                             //printf("%d--->", successExtractSF);
-                            successExtractSF = extractSF(file_path, i, 15, &h, false);
+                            successExtractSF = extractSF(file_path, i, 16, &h, false);
                             if (successExtractSF == 0) {
                                 printf("%s\n", file_path);
                                 break;
