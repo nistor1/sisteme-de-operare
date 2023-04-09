@@ -7,9 +7,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <fcntl.h>
-
 #include <errno.h>
-
 
 typedef struct SECTION_HEADER_{
     char sectName[17];
@@ -24,22 +22,18 @@ typedef struct HEADER_SECTION_FILE_{
     SECTION_HEADERS* sectionsHeaders;
     short int headerSize;
     char magic[2];
-
 }HEADER_SECTION_FILE;
 
 void displaySF(HEADER_SECTION_FILE headerSF) {
     printf("SUCCESS\n");
     printf("version=%d\n", headerSF.version);
     printf("nr_sections=%d\n", (int)headerSF.noOfSections);
-
     for(int i = 0; i < headerSF.noOfSections; i++) {
         printf("section%d: %s %d %d\n", i+1, headerSF.sectionsHeaders[i].sectName, (int)headerSF.sectionsHeaders[i].sectType,  (int)headerSF.sectionsHeaders[i].sectSize);
     }
-
 }
 
 int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
-
     int fd = -1;
     char buffer[28];
     buffer[27] = 0;
@@ -49,15 +43,11 @@ int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
         printf("ERROR\ninvalid directory path");
         return -1;
     }
-
-    lseek(fd, 0, SEEK_END);
     lseek(fd, -26, SEEK_END);
-    
     int step = -1;
     int indexSections = 1;
     while(indexSections != 0) {
         int bufferCapacity = read(fd, buffer, 26);
-        //printf("%s", buffer);
         bufferCapacity--;
         if(bufferCapacity <= 0 || bufferCapacity > 26) {
             printf("ERROR\nbufferCapacity:%d\n", bufferCapacity);
@@ -73,27 +63,21 @@ int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
             if(step == 0 && bufferCapacity - 2 >= 0) {
                 headerSF->magic[1] = buffer[25];
                 headerSF->magic[0] = buffer[24];
-                //printf("(%c    %c)", headerSF->magic[0], headerSF->magic[1]);
                 bufferCapacity -= 2;
                 step++;
-
                 if(headerSF->magic[0] != 'Z' || headerSF->magic[1] != 'F') { 
                     if(display == true)
                     printf("ERROR\nwrong magic");
                     return -1;
                 }
-
             }        
             if(step == 1 && bufferCapacity - 2 >= 0) {
                 char tempShort[2];
                 short int f = 0;
                 tempShort[1] = buffer[23];
                 tempShort[0] = buffer[22];
-               // printf("(%d    %d)", tempShort[0], tempShort[1]);
                 memcpy(&f, tempShort, sizeof(short int));
-                //printf("%d\n", (int)f);
                 headerSF->headerSize = f;
-                //printf("%d", headerSF->headerSize);
                 bufferCapacity -= 2;
                 step++;
             }
@@ -105,16 +89,8 @@ int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
                 if(!(headerSF->version >= 25 && headerSF->version <= 118)) {
                     if(display == true)
                     printf("ERROR\nwrong version");
-                    //printf("->%d", headerSF->version);
                     return -1;
                 } 
-                //printf("%d ", headerSF.version);
-
-                //for(int i = 0; i < 25; i++) {
-                //    printf("%d ", buffer[i]);
-                //}
-
-
                 memcpy(&headerSF->noOfSections, buffer + 4, sizeof(char));
                 if(headerSF->noOfSections < 3 || headerSF->noOfSections > 11) {
                     if(display == true)
@@ -138,7 +114,6 @@ int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
                 int index = headerSF->noOfSections - indexSections;
                 for(int j = 0; j < 16; j++) {
                     headerSF->sectionsHeaders[index].sectName[j] = buffer[j];
-                    //printf("%c", buffer[j]);
                 }
                 headerSF->sectionsHeaders[index].sectName[16] = 0;
 
@@ -151,22 +126,15 @@ int parseSF(char* path, HEADER_SECTION_FILE* headerSF, bool display) {
                     printf("ERROR\nwrong sect_types");
                     return -1;   
                 }
-
                 headerSF->sectionsHeaders[index].sectType = tempSectType;
                 headerSF->sectionsHeaders[index].sectOffset = tempSectOffset;
                 headerSF->sectionsHeaders[index].sectSize = tempSectSize;
-                //printf("%d\n", index);
-                //printf("->%d->%d->%d\n", headerSF.sectionsHeaders[index].sectType, headerSF.sectionsHeaders[index].sectOffset, headerSF.sectionsHeaders[index].sectSize);
                 lseek(fd, -1, SEEK_CUR);
                 indexSections--;
                 step--;
             }
         }
     }
-
-    //    for(int i = 0; i < headerSF.noOfSections; i++) {
-    //    printf("section%d: %s %d %d\n", i+1, headerSF.sectionsHeaders[i].sectName, (int)headerSF.sectionsHeaders[i].sectType,  (int)headerSF.sectionsHeaders[i].sectSize);
-   // }
     if(display == true) {
             displaySF(*headerSF);
     }
@@ -193,14 +161,12 @@ int displayBufferBackwards(char* buffer, int size, int cur, bool display) {
 int extractSF(char* path, int section, int line, HEADER_SECTION_FILE* h, bool display) {
     int isValid = parseSF(path, h, false);
     if(isValid == -1) {
-        //printf("ia-o de aici");
         if(h->sectionsHeaders != NULL) {
             free(h->sectionsHeaders);
             h->sectionsHeaders = NULL;
         }
         return -1;
     }
-
     int fd = -1;
     char buffer[21];
 
@@ -213,14 +179,13 @@ int extractSF(char* path, int section, int line, HEADER_SECTION_FILE* h, bool di
         }
         return -1;
     }
-    
     int firstSuccess = 0;
     int index = 0;
     int cntNewLine = 0;
+
     section--;
     lseek(fd, h->sectionsHeaders[section].sectOffset, SEEK_SET);
     while(cntNewLine <= line && index < h->sectionsHeaders[section].sectSize) {
-
         read(fd, buffer, 20);
         int j = 0;
         for(j = 0; j < 20; j++) {
@@ -249,20 +214,15 @@ int extractSF(char* path, int section, int line, HEADER_SECTION_FILE* h, bool di
                 }
                 firstSuccess++;
             }
-            //buffer[20] == 0;
-            //printf("%s", buffer);
             if(j-1 != 0) {
                 if(displayBufferBackwards(buffer, 20, j-1, display) == 0) {
-                    //printf("\nIo zic ca merge");
-                    //printf("%d %d", index, h->sectionsHeaders[section].sectSize);
                     close(fd);
                     if(h->sectionsHeaders != NULL) {
                         free(h->sectionsHeaders);
                         h->sectionsHeaders = NULL;
                     }
                     return 0;
-                   }
-
+                }
             } 
             if(lseek(fd, -40, SEEK_CUR) == -1) {
             lseek(fd, 0, SEEK_SET);
@@ -270,9 +230,7 @@ int extractSF(char* path, int section, int line, HEADER_SECTION_FILE* h, bool di
             index -= 40;
         }
         j= 0;
-        //printf("\n%d\n", cntNewLine);
     }
-
     close(fd);
     if(h->sectionsHeaders != NULL) {
         free(h->sectionsHeaders);
@@ -281,12 +239,22 @@ int extractSF(char* path, int section, int line, HEADER_SECTION_FILE* h, bool di
     return -1;
 }
 
+void initStructHeader(HEADER_SECTION_FILE *h){
+    h->headerSize=0;
+    h->magic[0] = 0;
+    h->magic[1] = 0;
+    h->noOfSections = 0;
+    h->version = 0;
+    if (h->sectionsHeaders != NULL) {
+        free(h->sectionsHeaders);
+        h->sectionsHeaders = NULL;
+    }
+}
 
 int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
     DIR *dir = NULL;
     struct dirent *entry = NULL;
     dir = opendir(path);
-
     struct stat statbuf;
 
     if(dir == NULL) {
@@ -297,9 +265,8 @@ int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
         printf("SUCCESS\n");
         (*firstO)++;
     }
+
     while((entry = readdir(dir)) != NULL) {
-
-
         char file_path[1024];
         sprintf(file_path, "%s/%s", path, entry->d_name);
         struct stat file_stat;
@@ -309,27 +276,19 @@ int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
             continue;
         }
         if (verifySF == true) {
-
             if (lstat(file_path, &statbuf) == 0) {
                 if (S_ISREG(statbuf.st_mode)) {
                     HEADER_SECTION_FILE h;
-                    h.headerSize=0;
-                    h.magic[0] = 0;
-                    h.magic[1] = 0;
-                    h.noOfSections = 0;
                     h.sectionsHeaders = NULL;
-                    h.version = 0;
+                    initStructHeader(&h);
                     int successParseSF = -1;
+                    int numberOfSections = -1;
                     successParseSF = parseSF(file_path, &h, false);
-                    //printf("successParseSF -> %d\n", successParseSF);
+                    numberOfSections = h.noOfSections;
                     if ( successParseSF == 0) {
-                        if (h.sectionsHeaders != NULL) {
-                            free(h.sectionsHeaders);
-                            h.sectionsHeaders = NULL;
-                        }
-                       for (int i = 0; i <= h.noOfSections; i++) {
+                        initStructHeader(&h);
+                       for (int i = 0; i <= numberOfSections; i++) {
                             int successExtractSF = -1;
-                            //printf("%d--->", successExtractSF);
                             successExtractSF = extractSF(file_path, i, 16, &h, false);
                             if (successExtractSF == 0) {
                                 printf("%s\n", file_path);
@@ -337,22 +296,18 @@ int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
                             }
                         }
                     }
-                    if (h.sectionsHeaders != NULL) {
-                        free(h.sectionsHeaders);
-                        h.sectionsHeaders = NULL;
-                    }
+                    initStructHeader(&h);
                 }
                 else if (S_ISDIR(statbuf.st_mode)) {
-                    // Skip directories
-                    continue;
+                    continue;// Skip directories
                 }
             }
         }else if(filter == NULL) {
-             if(lstat(file_path, &statbuf) == 0) {
-                        if(S_ISREG(statbuf.st_mode) || S_ISDIR(statbuf.st_mode)) {
-                            printf("%s\n", file_path); 
-
-                        }}
+            if(lstat(file_path, &statbuf) == 0) {
+                if(S_ISREG(statbuf.st_mode) || S_ISDIR(statbuf.st_mode)) {
+                    printf("%s\n", file_path); 
+                }
+            }
         } else {
             if(filter[0] == 'r') { // grater_than
                long int size = 0;
@@ -392,8 +347,7 @@ int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
         if(*firstO == 0) {
             printf("SUCCESS\n");
             (*firstO)++;
-        }
-        
+        }   
         while((entry = readdir(dir)) != NULL) {
             if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
                 snprintf(fullPath, 1024, "%s/%s", path, entry->d_name);
@@ -407,16 +361,12 @@ int listDir(const char *path, char* filter, int* firstO, bool verifySF) {
         closedir(dir);
     }
 
-
 int main(int argc, char **argv){
     if(argc >= 2){
         if(strcmp(argv[1], "variant") == 0){
             printf("19799\n");
         } else {
-            bool list = false;
-            bool parse = false;
-            bool extract = false;
-            bool findall = false;
+            bool list = false, parse = false, extract = false, findall = false;
             for (int i = 1; i < argc; i++) {
                 if (strcmp(argv[i], "list") == 0) {
                     list = true;
@@ -451,7 +401,6 @@ int main(int argc, char **argv){
                         break;
                     }
                 }
-                 
                 for (int i = 1; i < argc; i++) {
                     if (strncmp(argv[i], "size_greater=", 12) == 0) {
                         filter = argv[i] + 11;
@@ -461,7 +410,6 @@ int main(int argc, char **argv){
                         break;
                     }
                 }
-
                 if(filter != NULL) {
                     if(filter[2] == '\0') {
                         filter = NULL;
@@ -482,12 +430,8 @@ int main(int argc, char **argv){
                     }
                 }
                 HEADER_SECTION_FILE h;
-                h.headerSize=0;
-                h.magic[0] = 0;
-                h.magic[1] = 0;
-                h.noOfSections = 0;
                 h.sectionsHeaders = NULL;
-                h.version = 0;
+                initStructHeader(&h);
                 parseSF(path, &h, true);
                 free(h.sectionsHeaders);
             } else if(extract == true) {
@@ -506,12 +450,8 @@ int main(int argc, char **argv){
                     }
                 }
                 HEADER_SECTION_FILE h;
-                h.headerSize=0;
-                h.magic[0] = 0;
-                h.magic[1] = 0;
-                h.noOfSections = 0;
                 h.sectionsHeaders = NULL;
-                h.version = 0; 
+                initStructHeader(&h);
                 extractSF(path, section, line, &h, true);
             } else if(findall == true) {
                 char* path = NULL;
@@ -525,7 +465,6 @@ int main(int argc, char **argv){
                 listRec(path, NULL, &firstO, true);
             }
         }
-    } 
-    
+    }     
     return 0;
 }
