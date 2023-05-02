@@ -155,16 +155,16 @@ int main() {
             } else if (pid5 == 0) {
                 info(BEGIN, 5, 0);
 
-                pthread_t t5[NR_THREADS];
-                THREAD_DATA params5[NR_THREADS];
+                pthread_t t5[40];
+                THREAD_DATA params5[40];
 
-                for (int i = 0; i < NR_THREADS; i++) {
+                for (int i = 0; i < 40; i++) {
                     params5[i].threadIndex = i;
                     params5[i].threadProcess = 5;
                     pthread_create(&t5[i], NULL, threadFunction, &params5[i]);
                 }
 
-                for (int i = 0; i < NR_THREADS; i++) {
+                for (int i = 0; i < 40; i++) {
                     pthread_join(t5[i], NULL);
                 }
 
