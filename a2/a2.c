@@ -99,13 +99,15 @@ void* threadFunction(void* arg) {
                     sem_wait(&sem5);
                     info(BEGIN, tempT.threadProcess, threadId);
                     sem_wait(&sem5Barrier);
+                    for(int i = 0; i < 1000000000; i++) {
 
+                    }
                     info(END, tempT.threadProcess, threadId);
 
                     sem_post(&sem5Barrier);
-                    sem_post(&sem5); // Eliberează accesul pentru alt thread
+                    sem_post(&sem5); 
 
-                    //sem_post(&sem5); // Eliberează accesul pentru alt thread
+                    //sem_post(&sem5); 
 
                     return NULL;
 
@@ -116,7 +118,7 @@ void* threadFunction(void* arg) {
                     sem_post(&sem5Barrier);
                     info(END, tempT.threadProcess, threadId);
 
-                    sem_post(&sem5); // Eliberează accesul pentru alt thread
+                    sem_post(&sem5); 
 
                     return NULL;
                 }
