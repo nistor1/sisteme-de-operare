@@ -99,7 +99,7 @@ void* threadFunction(void* arg) {
                     sem_wait(&sem5);
                     info(BEGIN, tempT.threadProcess, threadId);
                     sem_wait(&sem5Barrier);
-                    for(int i = 0; i < 1000000000; i++) {
+                    for(int i = 0; i < 1096000000; i++) {
 
                     }
                     info(END, tempT.threadProcess, threadId);
