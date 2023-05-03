@@ -5,21 +5,67 @@
 #include <sys/wait.h>
 #include "a2_helper.h"
 #include <pthread.h>
+#include <semaphore.h>
 
 #define NR_THREADS 5
 
 typedef struct _THREAD_DATA{
     int threadProcess;
     int threadIndex;
+    pthread_t* t;
 } THREAD_DATA;
+
+sem_t semP2[5];
+
 void* threadFunction(void* arg) {
     THREAD_DATA tempT = *(THREAD_DATA*)arg;
     int threadId = tempT.threadIndex;
-    info(BEGIN, tempT.threadProcess, threadId + 1);
-    info(END, tempT.threadProcess, threadId + 1);
+    threadId++;
+    info(BEGIN, tempT.threadProcess, threadId);
+    info(END, tempT.threadProcess, threadId);
+
     pthread_exit(NULL);
 }
+void* threadFunction2(void* arg) {
+    THREAD_DATA tempT = *(THREAD_DATA*)arg;
+    int threadId = tempT.threadIndex;
+    threadId++;
 
+    if(threadId == 0) {
+            info(BEGIN, tempT.threadProcess, threadId);
+
+            for(int i = 0; i < NR_THREADS; i++) {
+                sem_wait(&semP2[0]);
+            }
+            info(END, tempT.threadProcess, threadId);
+
+        } else {
+            sem_post(&semP2[0]);
+                if(threadId == 1) {
+                    info(BEGIN, tempT.threadProcess, threadId);
+                    sem_post(&semP2[3]);
+
+
+                    sem_wait(&semP2[1]);
+                    info(END, tempT.threadProcess, threadId);
+                } else {
+                    if(threadId == 3) {
+                        sem_wait(&semP2[3]);
+                        info(BEGIN, tempT.threadProcess, threadId );
+
+                        
+                        info(END, tempT.threadProcess, threadId);
+                        sem_post(&semP2[1]);
+                    } else {
+                        info(BEGIN, tempT.threadProcess, threadId);
+                        info(END, tempT.threadProcess, threadId);
+                    }
+
+                }
+            }
+
+    pthread_exit(NULL);
+}
 int main() {
     init();
     pid_t pid2, pid3, pid4, pid5, pid6, pid7, pid8;
@@ -60,6 +106,7 @@ int main() {
                         for (int i = 0; i < NR_THREADS; i++) {
                             params8[i].threadIndex = i;
                             params8[i].threadProcess = 8;
+                            params8[i].t = NULL;
                             pthread_create(&t8[i], NULL, threadFunction, &params8[i]);
                         }
 
@@ -78,6 +125,7 @@ int main() {
                     for (int i = 0; i < NR_THREADS; i++) {
                         params7[i].threadIndex = i;
                         params7[i].threadProcess = 7;
+                        params7[i].t = NULL;
                         pthread_create(&t7[i], NULL, threadFunction, &params7[i]);
                     }
 
@@ -95,6 +143,7 @@ int main() {
                 for (int i = 0; i < NR_THREADS; i++) {
                     params6[i].threadIndex = i;
                     params6[i].threadProcess = 6;
+                    params6[i].t = NULL;
                     pthread_create(&t6[i], NULL, threadFunction, &params6[i]);
                 }
 
@@ -114,6 +163,7 @@ int main() {
             for (int i = 0; i < NR_THREADS; i++) {
                 params3[i].threadIndex = i;
                 params3[i].threadProcess = 3;
+                params3[i].t = NULL;
                 pthread_create(&t3[i], NULL, threadFunction, &params3[i]);
             }
 
@@ -129,15 +179,23 @@ int main() {
 
         pthread_t t2[NR_THREADS];
         THREAD_DATA params2[NR_THREADS];
+            sem_init(&semP2[0], 0, 1);
+            sem_init(&semP2[1], 0, 0);
+            sem_init(&semP2[2], 0, 1);
+            sem_init(&semP2[3], 0, 0);
+            sem_init(&semP2[4], 0, 1);
+            sem_init(&semP2[5], 0, 1);
 
         for (int i = 0; i < NR_THREADS; i++) {
             params2[i].threadIndex = i;
             params2[i].threadProcess = 2;
-            pthread_create(&t2[i], NULL, threadFunction, &params2[i]);
+            params2[i].t = t2;
+            pthread_create(&t2[i], NULL, threadFunction2, &params2[i]);
         }
 
         for (int i = 0; i < NR_THREADS; i++) {
             pthread_join(t2[i], NULL);
+            sem_destroy(&semP2[i]);
         }
 
         info(END, 2, 0);
@@ -161,6 +219,7 @@ int main() {
                 for (int i = 0; i < 40; i++) {
                     params5[i].threadIndex = i;
                     params5[i].threadProcess = 5;
+                    params5[i].t = NULL;
                     pthread_create(&t5[i], NULL, threadFunction, &params5[i]);
                 }
 
@@ -179,6 +238,7 @@ int main() {
             for (int i = 0; i < NR_THREADS; i++) {
                 params4[i].threadIndex = i;
                 params4[i].threadProcess = 4;
+                params4[i].t = NULL;
                 pthread_create(&t4[i], NULL, threadFunction, &params4[i]);
             }
 
