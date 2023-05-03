@@ -96,26 +96,27 @@ void* threadFunction(void* arg) {
          else {
             if(tempT.threadProcess == 5) {
                 if(threadId == 10) {
-                   // sem_wait(&sem5Barrier);
                     sem_wait(&sem5);
                     info(BEGIN, tempT.threadProcess, threadId);
+                    sem_wait(&sem5Barrier);
+
                     info(END, tempT.threadProcess, threadId);
 
+                    sem_post(&sem5Barrier);
                     sem_post(&sem5); // Eliberează accesul pentru alt thread
-                  //  sem_post(&sem5Barrier);
 
                     //sem_post(&sem5); // Eliberează accesul pentru alt thread
 
                     return NULL;
 
                 } else {
-                  //  sem_wait(&sem5Barrier);
                     sem_wait(&sem5);
                     info(BEGIN, tempT.threadProcess, threadId);
+                    sem_wait(&sem5Barrier);
+                    sem_post(&sem5Barrier);
                     info(END, tempT.threadProcess, threadId);
 
                     sem_post(&sem5); // Eliberează accesul pentru alt thread
-                  //  sem_post(&sem5Barrier);
 
                     return NULL;
                 }
