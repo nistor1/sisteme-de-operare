@@ -6,6 +6,7 @@
 #include "a2_helper.h"
 #include <pthread.h>
 #include <semaphore.h>
+#include <fcntl.h>
 
 #define NR_THREADS 5
 
@@ -15,63 +16,109 @@ typedef struct _THREAD_DATA{
     pthread_t* t;
 } THREAD_DATA;
 
-sem_t semP2[5];
+sem_t semP2[6];
+sem_t* sem1;
+sem_t* sem2;
 
 void* threadFunction(void* arg) {
     THREAD_DATA tempT = *(THREAD_DATA*)arg;
     int threadId = tempT.threadIndex;
     threadId++;
-    info(BEGIN, tempT.threadProcess, threadId);
-    info(END, tempT.threadProcess, threadId);
+    
+    if(tempT.threadProcess == 2) {
+        if(threadId == 0) {
+                info(BEGIN, tempT.threadProcess, threadId);
 
-    pthread_exit(NULL);
-}
-void* threadFunction2(void* arg) {
-    THREAD_DATA tempT = *(THREAD_DATA*)arg;
-    int threadId = tempT.threadIndex;
-    threadId++;
-
-    if(threadId == 0) {
-            info(BEGIN, tempT.threadProcess, threadId);
-
-            for(int i = 0; i < NR_THREADS; i++) {
-                sem_wait(&semP2[0]);
-            }
-            info(END, tempT.threadProcess, threadId);
-
-        } else {
-            sem_post(&semP2[0]);
-                if(threadId == 1) {
-                    info(BEGIN, tempT.threadProcess, threadId);
-                    sem_post(&semP2[3]);
-
-
-                    sem_wait(&semP2[1]);
-                    info(END, tempT.threadProcess, threadId);
-                } else {
-                    if(threadId == 3) {
-                        sem_wait(&semP2[3]);
-                        info(BEGIN, tempT.threadProcess, threadId );
-
-                        
-                        info(END, tempT.threadProcess, threadId);
-                        sem_post(&semP2[1]);
-                    } else {
-                        info(BEGIN, tempT.threadProcess, threadId);
-                        info(END, tempT.threadProcess, threadId);
-                    }
-
+                for(int i = 0; i < NR_THREADS; i++) {
+                    sem_wait(&semP2[0]);
                 }
+                info(END, tempT.threadProcess, threadId);
+
+            } else {
+                sem_post(&semP2[0]);
+                    if(threadId == 1) {
+                        info(BEGIN, tempT.threadProcess, threadId);
+                        sem_post(&semP2[3]);
+
+                        sem_wait(&semP2[1]);
+                        info(END, tempT.threadProcess, threadId);
+                    } else {
+
+                        if(threadId == 3) {
+                            sem_wait(&semP2[3]);
+                            info(BEGIN, tempT.threadProcess, threadId );
+
+                            info(END, tempT.threadProcess, threadId );
+                            sem_post(&semP2[1]);
+                        } else {
+                                if(threadId == 5) {
+                                    printf("\n\n\n\n eu astept\n\n\n\n");
+                                sem_wait(sem2);
+                                info(BEGIN, tempT.threadProcess, threadId );
+                                    printf("\n\n\n\n eu inca astept\n\n\n\n");
+
+                                info(END, tempT.threadProcess, threadId );
+                                sem_post(sem1);
+                            } else {
+                                info(BEGIN, tempT.threadProcess, threadId);
+                                info(END, tempT.threadProcess, threadId);
+                            }
+                        }
+
+                    }
+                }
+    } else {
+        if(tempT.threadProcess == 4) {
+            if(threadId == 5) {
+                info(BEGIN, tempT.threadProcess, threadId );
+
+                info(END, tempT.threadProcess, threadId );
+                sem_post(sem2);
+                printf("\n\n\n\neu te las\n\n\n\n");
             }
+            else {
+                if(threadId == 2) {
+                    sem_wait(sem1);
+                    info(BEGIN, tempT.threadProcess, threadId );
+
+                    info(END, tempT.threadProcess, threadId );
+                }
+                else {
+                    info(BEGIN, tempT.threadProcess, threadId);
+                    info(END, tempT.threadProcess, threadId);        
+                }      
+            }
+         }
+         else {
+            info(BEGIN, tempT.threadProcess, threadId);
+            info(END, tempT.threadProcess, threadId);        
+         }
+
+    }
 
     pthread_exit(NULL);
 }
+
 int main() {
     init();
     pid_t pid2, pid3, pid4, pid5, pid6, pid7, pid8;
     info(BEGIN, 1, 0);
+    
+    sem_unlink("/sem1ForP4");
+    sem_unlink("/sem2ForP2");
 
+     sem1 = sem_open("/sem1ForP4", O_CREAT, 0644, 0);
+     if(sem1 == NULL) {
+        perror("Could not aquire the semaphore");
+        return -1;
+    }
+    sem_unlink("/sem2ForP2");
 
+     sem2 = sem_open("/sem2ForP2", O_CREAT, 0644, 0);
+     if(sem2 == NULL) {
+        perror("Could not aquire the semaphore");
+        return -1;
+    }
     pid2 = fork();
     if (pid2 == -1) {
         return -1;
@@ -190,7 +237,7 @@ int main() {
             params2[i].threadIndex = i;
             params2[i].threadProcess = 2;
             params2[i].t = t2;
-            pthread_create(&t2[i], NULL, threadFunction2, &params2[i]);
+            pthread_create(&t2[i], NULL, threadFunction, &params2[i]);
         }
 
         for (int i = 0; i < NR_THREADS; i++) {
@@ -253,7 +300,9 @@ int main() {
         }
     }
     waitpid(pid2, NULL, 0);
-    info(END, 1, 0);
 
+    info(END, 1, 0);
+    sem_close(sem1);
+    sem_close(sem2);
     return 0;
 }
