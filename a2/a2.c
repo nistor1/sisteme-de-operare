@@ -17,8 +17,15 @@ typedef struct _THREAD_DATA{
 } THREAD_DATA;
 
 sem_t semP2[6];
-sem_t* sem1;
-sem_t* sem2;
+sem_t* sem1= NULL;
+sem_t* sem2 = NULL;
+
+//sem_t semP5[41];
+//int nextTask = 0;
+//pthread_mutex_t mutex;
+
+sem_t sem5;
+sem_t sem5Barrier;
 
 void* threadFunction(void* arg) {
     THREAD_DATA tempT = *(THREAD_DATA*)arg;
@@ -52,10 +59,8 @@ void* threadFunction(void* arg) {
                             sem_post(&semP2[1]);
                         } else {
                                 if(threadId == 5) {
-                                    printf("\n\n\n\n eu astept\n\n\n\n");
                                 sem_wait(sem2);
                                 info(BEGIN, tempT.threadProcess, threadId );
-                                    printf("\n\n\n\n eu inca astept\n\n\n\n");
 
                                 info(END, tempT.threadProcess, threadId );
                                 sem_post(sem1);
@@ -74,7 +79,6 @@ void* threadFunction(void* arg) {
 
                 info(END, tempT.threadProcess, threadId );
                 sem_post(sem2);
-                printf("\n\n\n\neu te las\n\n\n\n");
             }
             else {
                 if(threadId == 2) {
@@ -90,8 +94,66 @@ void* threadFunction(void* arg) {
             }
          }
          else {
-            info(BEGIN, tempT.threadProcess, threadId);
-            info(END, tempT.threadProcess, threadId);        
+            if(tempT.threadProcess == 5) {
+                if(threadId == 10) {
+                   // sem_wait(&sem5Barrier);
+                    sem_wait(&sem5);
+                    info(BEGIN, tempT.threadProcess, threadId);
+                    info(END, tempT.threadProcess, threadId);
+
+                    sem_post(&sem5); // Eliberează accesul pentru alt thread
+                  //  sem_post(&sem5Barrier);
+
+                    //sem_post(&sem5); // Eliberează accesul pentru alt thread
+
+                    return NULL;
+
+                } else {
+                  //  sem_wait(&sem5Barrier);
+                    sem_wait(&sem5);
+                    info(BEGIN, tempT.threadProcess, threadId);
+                    info(END, tempT.threadProcess, threadId);
+
+                    sem_post(&sem5); // Eliberează accesul pentru alt thread
+                  //  sem_post(&sem5Barrier);
+
+                    return NULL;
+                }
+               /* int myTask;
+                int cnt = 5;
+                for(;;) {
+                    pthread_mutex_lock(&mutex);
+                    if (nextTask >= 40) {
+                        pthread_mutex_unlock(&mutex);
+                        break;
+                    }
+                    if(cnt < 5) {
+                        myTask = nextTask;
+                        ++nextTask; 
+                        cnt++;                       
+                    }
+                    pthread_mutex_unlock(&mutex);
+
+                    info(BEGIN, tempT.threadProcess, threadId);
+                    if(cnt < 5) {
+                        sem_post(&semP5[myTask]);
+                    }
+
+                    //printf("\n\nthreadId%d\n\n", threadId);
+                    sem_wait(&semP5[myTask]);
+
+                    info(END, tempT.threadProcess, threadId); 
+                    
+                    pthread_mutex_lock(&mutex);
+                    if(cnt <= 5) {
+                        cnt--;                     
+                    }
+                    pthread_mutex_unlock(&mutex);*/
+            }
+            else {
+                info(BEGIN, tempT.threadProcess, threadId);
+                info(END, tempT.threadProcess, threadId);        
+            }   
          }
 
     }
@@ -262,7 +324,17 @@ int main() {
 
                 pthread_t t5[40];
                 THREAD_DATA params5[40];
+                /*sem_init(&semP5[0],0,1);
+                sem_init(&semP5[1],0,1);
+                sem_init(&semP5[2],0,1);
+                sem_init(&semP5[3],0,1);
+                sem_init(&semP5[4],0,1);
+                for(int i = 5; i < 40; i++) {
+                    sem_init(&semP5[i],0,0);
+                }*/
 
+                sem_init(&sem5, 0 , 5);
+                sem_init(&sem5Barrier, 0, 1);
                 for (int i = 0; i < 40; i++) {
                     params5[i].threadIndex = i;
                     params5[i].threadProcess = 5;
