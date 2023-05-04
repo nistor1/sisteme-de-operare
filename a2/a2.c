@@ -26,6 +26,7 @@ sem_t* sem2 = NULL;
 
 sem_t sem5;
 sem_t sem5Barrier;
+sem_t sem5BarrierV2;
 
 void* threadFunction(void* arg) {
     THREAD_DATA tempT = *(THREAD_DATA*)arg;
@@ -95,63 +96,14 @@ void* threadFunction(void* arg) {
          }
          else {
             if(tempT.threadProcess == 5) {
-                if(threadId == 10) {
-                    sem_wait(&sem5);
-                    info(BEGIN, tempT.threadProcess, threadId);
-                    sem_wait(&sem5Barrier);
-                    for(int i = 0; i < 1096000000; i++) {
+                sem_wait(&sem5);
+                info(BEGIN, tempT.threadProcess, threadId);
+                //sem_wait(&sem5Barrier);
+                //sem_post(&sem5Barrier);
+                info(END, tempT.threadProcess, threadId);
+                sem_post(&sem5); 
 
-                    }
-                    info(END, tempT.threadProcess, threadId);
-
-                    sem_post(&sem5Barrier);
-                    sem_post(&sem5); 
-
-                    //sem_post(&sem5); 
-
-                    return NULL;
-
-                } else {
-                    sem_wait(&sem5);
-                    info(BEGIN, tempT.threadProcess, threadId);
-                    sem_wait(&sem5Barrier);
-                    sem_post(&sem5Barrier);
-                    info(END, tempT.threadProcess, threadId);
-
-                    sem_post(&sem5); 
-
-                    return NULL;
-                }
-               /* int myTask;
-                int cnt = 5;
-                for(;;) {
-                    pthread_mutex_lock(&mutex);
-                    if (nextTask >= 40) {
-                        pthread_mutex_unlock(&mutex);
-                        break;
-                    }
-                    if(cnt < 5) {
-                        myTask = nextTask;
-                        ++nextTask; 
-                        cnt++;                       
-                    }
-                    pthread_mutex_unlock(&mutex);
-
-                    info(BEGIN, tempT.threadProcess, threadId);
-                    if(cnt < 5) {
-                        sem_post(&semP5[myTask]);
-                    }
-
-                    //printf("\n\nthreadId%d\n\n", threadId);
-                    sem_wait(&semP5[myTask]);
-
-                    info(END, tempT.threadProcess, threadId); 
-                    
-                    pthread_mutex_lock(&mutex);
-                    if(cnt <= 5) {
-                        cnt--;                     
-                    }
-                    pthread_mutex_unlock(&mutex);*/
+                return NULL;
             }
             else {
                 info(BEGIN, tempT.threadProcess, threadId);
@@ -162,6 +114,32 @@ void* threadFunction(void* arg) {
     }
 
     pthread_exit(NULL);
+}
+
+void* threadFunctionP5(void* arg) {
+    THREAD_DATA tempT = *(THREAD_DATA*)arg;
+    int threadId = tempT.threadIndex;
+    threadId++;
+
+    if(threadId == 10) {
+        info(BEGIN, tempT.threadProcess, threadId);
+
+        info(END, tempT.threadProcess, threadId);
+        sem_post(&sem5BarrierV2);
+        sem_post(&sem5Barrier);
+        //sem_post(&sem5);
+        return NULL;
+
+    } else {
+        info(BEGIN, tempT.threadProcess, threadId);
+        sem_wait(&sem5BarrierV2);
+        info(END, tempT.threadProcess, threadId);
+        sem_post(&sem5BarrierV2);
+        //sem_post(&sem5);
+        sem_post(&sem5Barrier);
+        return NULL;
+    }
+    
 }
 
 int main() {
@@ -327,22 +305,45 @@ int main() {
 
                 pthread_t t5[40];
                 THREAD_DATA params5[40];
-                /*sem_init(&semP5[0],0,1);
-                sem_init(&semP5[1],0,1);
-                sem_init(&semP5[2],0,1);
-                sem_init(&semP5[3],0,1);
-                sem_init(&semP5[4],0,1);
-                for(int i = 5; i < 40; i++) {
-                    sem_init(&semP5[i],0,0);
-                }*/
 
-                sem_init(&sem5, 0 , 5);
-                sem_init(&sem5Barrier, 0, 1);
-                for (int i = 0; i < 40; i++) {
-                    params5[i].threadIndex = i;
-                    params5[i].threadProcess = 5;
-                    params5[i].t = NULL;
-                    pthread_create(&t5[i], NULL, threadFunction, &params5[i]);
+                sem_init(&sem5, 0 , 4);
+                sem_init(&sem5Barrier, 0, 0);
+                sem_init(&sem5BarrierV2, 0, 0);
+
+                    params5[9].threadIndex = 9;
+                    params5[9].threadProcess = 5;
+                    params5[9].t = NULL;
+                    pthread_create(&t5[9], NULL, threadFunctionP5, &params5[9]);                    
+                    params5[1].threadIndex = 1;
+                    params5[1].threadProcess = 5;
+                    params5[1].t = NULL;
+                    pthread_create(&t5[1], NULL, threadFunctionP5, &params5[1]);                    
+                    params5[2].threadIndex = 2;
+                    params5[2].threadProcess = 5;
+                    params5[2].t = NULL;
+                    pthread_create(&t5[2], NULL, threadFunctionP5, &params5[2]);                    
+                    params5[3].threadIndex = 3;
+                    params5[3].threadProcess = 5;
+                    params5[3].t = NULL;
+                    pthread_create(&t5[3], NULL, threadFunctionP5, &params5[3]);                    
+                    params5[0].threadIndex = 0;
+                    params5[0].threadProcess = 5;
+                    params5[0].t = NULL;
+                    pthread_create(&t5[0], NULL, threadFunctionP5, &params5[0]);
+                    sem_wait(&sem5Barrier);
+                sem_wait(&sem5Barrier);
+                sem_wait(&sem5Barrier);
+                sem_wait(&sem5Barrier);
+                sem_wait(&sem5Barrier);
+
+                for (int i = 4; i < 40; i++) {
+                    
+                    if(i!=9){
+                        params5[i].threadIndex = i;
+                        params5[i].threadProcess = 5;
+                        params5[i].t = NULL;
+                        pthread_create(&t5[i], NULL, threadFunction, &params5[i]);
+                    }
                 }
 
                 for (int i = 0; i < 40; i++) {
