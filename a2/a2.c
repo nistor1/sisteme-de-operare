@@ -27,6 +27,7 @@ sem_t* sem2 = NULL;
 sem_t sem5;
 sem_t sem5Barrier;
 sem_t sem5BarrierV2;
+sem_t sem5TempBarrier;
 
 void* threadFunction(void* arg) {
     THREAD_DATA tempT = *(THREAD_DATA*)arg;
@@ -98,8 +99,7 @@ void* threadFunction(void* arg) {
             if(tempT.threadProcess == 5) {
                 sem_wait(&sem5);
                 info(BEGIN, tempT.threadProcess, threadId);
-                //sem_wait(&sem5Barrier);
-                //sem_post(&sem5Barrier);
+     
                 info(END, tempT.threadProcess, threadId);
                 sem_post(&sem5); 
 
@@ -123,15 +123,21 @@ void* threadFunctionP5(void* arg) {
 
     if(threadId == 10) {
         info(BEGIN, tempT.threadProcess, threadId);
-
+                sem_wait(&sem5TempBarrier);
+                sem_wait(&sem5TempBarrier);
+                sem_wait(&sem5TempBarrier);
+                sem_wait(&sem5TempBarrier);
         info(END, tempT.threadProcess, threadId);
         sem_post(&sem5BarrierV2);
+
+                //sem_wait(&sem5TempBarrier);
         sem_post(&sem5Barrier);
         //sem_post(&sem5);
         return NULL;
 
     } else {
         info(BEGIN, tempT.threadProcess, threadId);
+        sem_post(&sem5TempBarrier);
         sem_wait(&sem5BarrierV2);
         info(END, tempT.threadProcess, threadId);
         sem_post(&sem5BarrierV2);
@@ -309,6 +315,8 @@ int main() {
                 sem_init(&sem5, 0 , 4);
                 sem_init(&sem5Barrier, 0, 0);
                 sem_init(&sem5BarrierV2, 0, 0);
+                sem_init(&sem5TempBarrier, 0, 0);
+               
 
                     params5[9].threadIndex = 9;
                     params5[9].threadProcess = 5;
