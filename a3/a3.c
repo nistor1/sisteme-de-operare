@@ -319,10 +319,10 @@ int main() {
                 perror("ERROR: cannot read from the request pipe");
                 exit(EXIT_FAILURE);
             }
-            const char* readFromFileSection = "READ_FROM_LOGICAL_SPACE_OFFSET!";
+            const char* readFromLogicalSpace = "READ_FROM_LOGICAL_SPACE_OFFSET!";
             const char* success = "SUCCESS!";
             const char* error = "ERROR!";
-            write(fdResp, readFromFileSection, strlen(readFromFileSection));
+            write(fdResp, readFromLogicalSpace, strlen(readFromLogicalSpace));
             HEADER_SECTION_FILE h;
             if(parseSF(dataFile, fileSize, &h) == -1) {
                 write(fdResp, error, strlen(error));
@@ -334,17 +334,31 @@ int main() {
                 continue;
             }  
             
-            unsigned int logicalOffset = offset;
+            unsigned int cnt = 0;
+            int x = 0;
 
             for(int i = 0; i < h.noOfSections; i++){
                 int secSize = h.sectionsHeaders[i].sectSize;
-                int secOffset = h.sectionsHeaders[i].sectOffset;
-                for(int j = 0; j < secSize; j++) {
-                    sharedMem[logicalOffset] = dataFile[secOffset + j];
-                    logicalOffset++;
+                int secOffset = h.sectionsHeaders[i].sectOffset;  
+                if((cnt + secSize) >= offset) {
+                        x = offset - cnt;
+                        for(int j = 0; j < noOfBytes; j++) {
+                            sharedMem[j] = dataFile[secOffset + x + j];
+                        }      
+                        break;                   
+                } else {
+                    cnt += secSize;
+                    cnt = ((cnt + 1023) / 1024) * 1024;
+
                 }
-                logicalOffset = ((logicalOffset + 1023) / 1024) * 1024;
+
             }
+
+                /*for(int j = 0; j < noOfBytes; j++) {
+                    sharedMem[logicalOffset] = dataFile[offset + j];
+                    logicalOffset++;
+                }*/
+
             
             if(h.sectionsHeaders != NULL)
             free(h.sectionsHeaders);
