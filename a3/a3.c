@@ -35,9 +35,7 @@ int parseSF(char* dataFile, int sizeFile, HEADER_SECTION_FILE* headerSF) {
 
                 headerSF->magic[1] = dataFile[indexFile -1];
                 headerSF->magic[0] = dataFile[indexFile -2];
-                if(headerSF->magic[0] != 'Z' || headerSF->magic[1] != 'F') { 
-                    return -1;
-                }       
+   
                 char tempShort[2];
                 short int f = 0;
                 tempShort[1] = dataFile[indexFile - 3];
@@ -48,14 +46,8 @@ int parseSF(char* dataFile, int sizeFile, HEADER_SECTION_FILE* headerSF) {
                 indexFile = sizeFile - headerSF->headerSize;
 
                 memcpy(&headerSF->version, &dataFile[indexFile], sizeof(int));
-                if(!(headerSF->version >= 25 && headerSF->version <= 118)) {
-                    return -1;
-                } 
                 indexFile += 4;
                 memcpy(&headerSF->noOfSections, &dataFile[indexFile], sizeof(char));
-                if(headerSF->noOfSections < 3 || headerSF->noOfSections > 11) {
-                    return -1;
-                }
                 indexFile++;
 
                 indexSections = headerSF->noOfSections;
@@ -276,15 +268,15 @@ int main() {
             unsigned int noOfBytes = 0;
             unsigned int sectionNo = 0;
 
-            if(read(fdReq, &offset, sizeof(unsigned int)) == -1) {
+            if(read(fdReq, &sectionNo, sizeof(unsigned int)) == -1) {
                 perror("ERROR: cannot read from the request pipe");
                 exit(EXIT_FAILURE);
             }           
-            if(read(fdReq, &noOfBytes, sizeof(unsigned int)) == -1) {
+            if(read(fdReq, &offset, sizeof(unsigned int)) == -1) {
                 perror("ERROR: cannot read from the request pipe");
                 exit(EXIT_FAILURE);
             }
-            if(read(fdReq, &sectionNo, sizeof(unsigned int)) == -1) {
+            if(read(fdReq, &noOfBytes, sizeof(unsigned int)) == -1) {
                 perror("ERROR: cannot read from the request pipe");
                 exit(EXIT_FAILURE);
             }
@@ -303,9 +295,59 @@ int main() {
                 continue;
             }  
             
-            for (int i = 0; i < noOfBytes; i++) {
-                sharedMem[i] = dataFile[h.sectionsHeaders[sectionNo].sectOffset + offset + i];
+            if(sectionNo < 1 || sectionNo > h.noOfSections) {
+                write(fdResp, error, strlen(error));
+                continue;
             }
+            for (int i = 0; i < noOfBytes; i++) {
+                sharedMem[i] = dataFile[h.sectionsHeaders[sectionNo-1].sectOffset+ offset + i];
+            }
+            if(h.sectionsHeaders != NULL)
+            free(h.sectionsHeaders);
+        
+            write(fdResp, success, strlen(success));
+        
+        } else if(strcmp(request, "READ_FROM_LOGICAL_SPACE_OFFSET!") == 0) {
+            unsigned int offset = 0;
+            unsigned int noOfBytes = 0;
+       
+            if(read(fdReq, &offset, sizeof(unsigned int)) == -1) {
+                perror("ERROR: cannot read from the request pipe");
+                exit(EXIT_FAILURE);
+            }
+            if(read(fdReq, &noOfBytes, sizeof(unsigned int)) == -1) {
+                perror("ERROR: cannot read from the request pipe");
+                exit(EXIT_FAILURE);
+            }
+            const char* readFromFileSection = "READ_FROM_LOGICAL_SPACE_OFFSET!";
+            const char* success = "SUCCESS!";
+            const char* error = "ERROR!";
+            write(fdResp, readFromFileSection, strlen(readFromFileSection));
+            HEADER_SECTION_FILE h;
+            if(parseSF(dataFile, fileSize, &h) == -1) {
+                write(fdResp, error, strlen(error));
+                continue;
+            }
+
+            if(noOfBytes > memSize) {
+                write(fdResp, error, strlen(error));
+                continue;
+            }  
+            
+            unsigned int logicalOffset = offset;
+
+            for(int i = 0; i < h.noOfSections; i++){
+                int secSize = h.sectionsHeaders[i].sectSize;
+                int secOffset = h.sectionsHeaders[i].sectOffset;
+                for(int j = 0; j < secSize; j++) {
+                    sharedMem[logicalOffset] = dataFile[secOffset + j];
+                    logicalOffset++;
+                }
+                logicalOffset = ((logicalOffset + 1023) / 1024) * 1024;
+            }
+            
+            if(h.sectionsHeaders != NULL)
+            free(h.sectionsHeaders);
         
             write(fdResp, success, strlen(success));
         
